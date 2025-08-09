@@ -16,8 +16,9 @@ import settingsRoutes from './routes/settings';
 dotenv.config();
 
 const app = express();
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
-const allowedOrigins = [FRONTEND_ORIGIN, 'http://localhost:3001'];
+// Allow configuring CORS via env. Support comma-separated list.
+const corsEnv = process.env.CORS_ORIGIN || process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+const allowedOrigins = corsEnv.split(',').map(s => s.trim()).filter(Boolean);
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
@@ -28,6 +29,10 @@ app.use(cors({
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
+  res.json({ ok: true, service: 'backend', time: new Date().toISOString() });
+});
+// Alias for deployment checks
+app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'backend', time: new Date().toISOString() });
 });
 
