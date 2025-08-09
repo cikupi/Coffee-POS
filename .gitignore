@@ -1,0 +1,46 @@
+# Node / JS
+node_modules/
+.npmrc
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# Next.js
+.next/
+.nextcache/
+out/
+.vercel/
+
+# Build outputs
+build/
+dist/
+coverage/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Env files
+.env
+.env.*
+apps/backend/.env
+apps/frontend/.env.local
+apps/frontend/.env.*.local
+# But keep example env files tracked
+!*.env.example
+!**/.env.example
+!apps/frontend/.env.local.example
+
+# Prisma
+prisma/*.db
+prisma/migrations/*-shadow-database
+
+# Logs
+*.log
+logs/
+
+# Misc
+*.zip

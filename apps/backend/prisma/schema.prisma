@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  KASIR
+  BARISTA
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?  @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+  shifts    Shift[]
+  stockMovements StockMovement[]
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?  @unique
+  email     String?  @unique
+  deposit   Decimal  @default(0) @db.Decimal(10, 2)
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  category    String
+  description String?
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  variants    Variant[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Variant {
+  id         String      @id @default(cuid())
+  product    Product     @relation(fields: [productId], references: [id])
+  productId  String
+  label      String // e.g., Hot, Iced, Size S/M/L, extras
+  price      Decimal     @db.Decimal(10, 2)
+  cost       Decimal     @default(0) @db.Decimal(10, 2)
+  sku        String?     @unique
+  stock      Int         @default(0)
+  lowStockThreshold Int  @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  orderItems OrderItem[]
+  movements  StockMovement[]
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  cashier     User        @relation(fields: [cashierId], references: [id])
+  cashierId   String
+  customer    Customer?   @relation(fields: [customerId], references: [id])
+  customerId  String?
+  shift       Shift?      @relation(fields: [shiftId], references: [id])
+  shiftId     String?
+  status      OrderStatus @default(PENDING)
+  dineType    DineType    @default(TAKEAWAY)
+  discount    Decimal     @default(0) @db.Decimal(10, 2)
+  subtotal    Decimal     @db.Decimal(10, 2)
+  total       Decimal     @db.Decimal(10, 2)
+  paid        Decimal     @db.Decimal(10, 2)
+  note        String?
+  paymentType PaymentType
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       OrderItem[]
+  stockMovements StockMovement[]
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum DineType {
+  DINE_IN
+  TAKEAWAY
+}
+
+enum PaymentType {
+  CASH
+  QRIS
+  CARD
+  DEPOSIT
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   String
+  variant   Variant @relation(fields: [variantId], references: [id])
+  variantId String
+  qty       Int
+  price     Decimal @db.Decimal(10, 2) // snapshot price
+  cost      Decimal @default(0) @db.Decimal(10, 2) // snapshot cost
+  discount  Decimal @default(0) @db.Decimal(10, 2)
+}
+
+model Shift {
+  id          String    @id @default(cuid())
+  cashier     User      @relation(fields: [cashierId], references: [id])
+  cashierId   String
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+  openingCash Decimal   @db.Decimal(10, 2)
+  closingCash Decimal?  @db.Decimal(10, 2)
+  notes       String?
+  orders      Order[]
+}
+
+// Inventory
+enum MovementType {
+  IN
+  OUT
+  ADJUST
+}
+
+model StockMovement {
+  id         String        @id @default(cuid())
+  variant    Variant       @relation(fields: [variantId], references: [id])
+  variantId  String
+  type       MovementType
+  qty        Int
+  note       String?
+  refOrder   Order?        @relation(fields: [refOrderId], references: [id])
+  refOrderId String?
+  user       User?         @relation(fields: [userId], references: [id])
+  userId     String?
+  createdAt  DateTime      @default(now())
+}
+
+// App settings (flexible key-value)
+model Setting {
+  key       String   @id
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
