@@ -1,5 +1,8 @@
 # Coffee POS Monorepo
 
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new?template=https://github.com/cikupi/Coffee-POS&plugins=postgresql&root=apps/backend)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/cikupi/Coffee-POS&project-name=coffee-pos-frontend&repository-name=Coffee-POS&root-directory=apps/frontend)
+
 Monorepo aplikasi POS:
 - Frontend: `apps/frontend` (Next.js)
 - Backend: `apps/backend` (Express + Prisma)
