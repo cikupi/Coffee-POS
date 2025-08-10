@@ -3,8 +3,8 @@ name: Backend Deploy (Railway)
 on:
   push:
     paths:
-      - 'apps/backend/**'
-      - '!apps/backend/.env*'
+      - 'backend/**'
+      - '!backend/.env*'
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: apps/backend
+        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,50 +22,59 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: 'apps/backend/package-lock.json'
+          cache-dependency-path: 'backend/package-lock.json'
 
       - name: Install Railway CLI
         run: npm i -g @railway/cli
 
-      - name: Login Railway
+      - name: Configure Railway Auth (token via env)
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway login --token "$RAILWAY_TOKEN"
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "RAILWAY_TOKEN is not set. Please add it as a GitHub Secret." >&2
+            exit 1
+          fi
+          echo "Using RAILWAY_TOKEN from GitHub Secrets."
+          railway auth login --token "$RAILWAY_TOKEN"
 
-      - name: Link to Railway Project/Service
+      - name: Link to Railway Project
         env:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
         run: |
-          railway link --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE_ID"
+          railway link --project "$RAILWAY_PROJECT_ID"
           railway status
 
       - name: Set Environment Variables on Railway Service
         env:
-          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          SERVICE_NAME: coffee-pos-backend
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           INPUT_JWT_SECRET: ${{ secrets.JWT_SECRET }}
           NODE_ENV: production
           CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
-          PORT: ${{ secrets.PORT }}
         run: |
           # Ensure JWT_SECRET exists: use provided secret or generate one
           if [ -z "$INPUT_JWT_SECRET" ]; then
             echo "JWT_SECRET is not provided in secrets. Generating a strong value..."
             GEN_JWT=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
-            railway variables set JWT_SECRET="$GEN_JWT" --service "$RAILWAY_SERVICE_ID"
+            railway variables set JWT_SECRET="$GEN_JWT" --service "$SERVICE_NAME"
           else
-            railway variables set JWT_SECRET="$INPUT_JWT_SECRET" --service "$RAILWAY_SERVICE_ID"
+            railway variables set JWT_SECRET="$INPUT_JWT_SECRET" --service "$SERVICE_NAME"
           fi
           
           # Set other variables only if provided
-          [ -n "$DATABASE_URL" ] && railway variables set DATABASE_URL="$DATABASE_URL" --service "$RAILWAY_SERVICE_ID" || true
-          [ -n "$NODE_ENV" ] && railway variables set NODE_ENV="$NODE_ENV" --service "$RAILWAY_SERVICE_ID" || true
-          [ -n "$CORS_ORIGIN" ] && railway variables set CORS_ORIGIN="$CORS_ORIGIN" --service "$RAILWAY_SERVICE_ID" || true
-          [ -n "$PORT" ] && railway variables set PORT="$PORT" --service "$RAILWAY_SERVICE_ID" || true
+          [ -n "$DATABASE_URL" ] && railway variables set DATABASE_URL="$DATABASE_URL" --service "$SERVICE_NAME" || true
+          [ -n "$NODE_ENV" ] && railway variables set NODE_ENV="$NODE_ENV" --service "$SERVICE_NAME" || true
+          [ -n "$CORS_ORIGIN" ] && railway variables set CORS_ORIGIN="$CORS_ORIGIN" --service "$SERVICE_NAME" || true
+          
+          # Ensure we DO NOT override platform PORT; delete any custom PORT var
+          if railway variables list --service "$SERVICE_NAME" | grep -q "^PORT="; then
+            echo "Deleting custom PORT to use Railway-assigned PORT"
+            railway variables delete PORT --service "$SERVICE_NAME" || true
+          fi
 
-      - name: Deploy to Railway
+      - name: Deploy to Railway (create if missing)
         env:
-          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          SERVICE_NAME: coffee-pos-backend
         run: |
-          railway up --service "$RAILWAY_SERVICE_ID" --detach
+          railway up --service "$SERVICE_NAME" --detach
