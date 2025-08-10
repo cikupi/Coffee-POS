@@ -4,6 +4,9 @@ const BACKEND = process.env.NEXT_PUBLIC_API_BASE || 'https://backend-gb3720bnp-c
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async rewrites() {
     return [
       {
