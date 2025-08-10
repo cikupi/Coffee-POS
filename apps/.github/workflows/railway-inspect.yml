@@ -1,0 +1,27 @@
+name: Railway Inspect
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Login Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway login --token "$RAILWAY_TOKEN"
+
+      - name: List Projects
+        run: railway projects list || true
+
+      - name: Current Project/Service (if linked)
+        run: |
+          railway status || true
+          echo "If not linked, set RAILWAY_PROJECT_ID and RAILWAY_SERVICE_ID secrets and use backend-railway-deploy.yml"

@@ -1,0 +1,63 @@
+name: Backend Deploy (Railway)
+
+on:
+  push:
+    paths:
+      - 'apps/backend/**'
+      - '!apps/backend/.env*'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'apps/backend/package-lock.json'
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Login Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway login --token "$RAILWAY_TOKEN"
+
+      - name: Link to Railway Project/Service
+        env:
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          railway link --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE_ID"
+          railway status
+
+      - name: Set Environment Variables on Railway Service
+        env:
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          NODE_ENV: production
+          CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+          PORT: ${{ secrets.PORT }}
+        run: |
+          # Only set variables that are provided
+          [ -n "$DATABASE_URL" ] && railway variables set DATABASE_URL="$DATABASE_URL" --service "$RAILWAY_SERVICE_ID" || true
+          [ -n "$JWT_SECRET" ] && railway variables set JWT_SECRET="$JWT_SECRET" --service "$RAILWAY_SERVICE_ID" || true
+          [ -n "$NODE_ENV" ] && railway variables set NODE_ENV="$NODE_ENV" --service "$RAILWAY_SERVICE_ID" || true
+          [ -n "$CORS_ORIGIN" ] && railway variables set CORS_ORIGIN="$CORS_ORIGIN" --service "$RAILWAY_SERVICE_ID" || true
+          [ -n "$PORT" ] && railway variables set PORT="$PORT" --service "$RAILWAY_SERVICE_ID" || true
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          railway up --service "$RAILWAY_SERVICE_ID" --detach
