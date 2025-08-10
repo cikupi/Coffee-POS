@@ -1,9 +1,9 @@
-// Prefer explicit env. Fallback:
-// - Production: use relative path '' (paired with Next.js rewrite to backend)
-// - Development: http://localhost:4000
+// Use same-origin API in production to avoid CORS entirely (Next.js rewrite proxies to backend).
+// In development, prefer env or default to localhost.
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ||
-  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000');
+  process.env.NODE_ENV === 'production'
+    ? ''
+    : (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000');
 
 export async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
