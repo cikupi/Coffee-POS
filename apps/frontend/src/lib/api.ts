@@ -1,4 +1,9 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
+// Prefer explicit env. Fallback:
+// - Production: use relative path '' (paired with Next.js rewrite to backend)
+// - Development: http://localhost:4000
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ||
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:4000');
 
 export async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
