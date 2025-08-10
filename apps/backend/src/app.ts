@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { prisma } from './prisma';
 
 import authRoutes from './routes/auth';
 import usersRoutes from './routes/users';
@@ -52,6 +53,18 @@ app.get('/api/health', (_req, res) => {
 // Public health for CORS/browser quick check
 app.get('/api/public/health', (_req, res) => {
   res.json({ ok: true, public: true, service: 'backend', time: new Date().toISOString() });
+});
+
+// DB health check
+app.get('/api/public/health/db', async (_req, res) => {
+  try {
+    const t0 = Date.now();
+    await prisma.$queryRaw`SELECT 1`;
+    const ms = Date.now() - t0;
+    res.json({ ok: true, db: 'up', latency_ms: ms, time: new Date().toISOString() });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message || 'DB error' });
+  }
 });
 
 // API routes
