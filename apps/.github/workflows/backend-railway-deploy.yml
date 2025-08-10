@@ -44,14 +44,22 @@ jobs:
         env:
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          INPUT_JWT_SECRET: ${{ secrets.JWT_SECRET }}
           NODE_ENV: production
           CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
           PORT: ${{ secrets.PORT }}
         run: |
-          # Only set variables that are provided
+          # Ensure JWT_SECRET exists: use provided secret or generate one
+          if [ -z "$INPUT_JWT_SECRET" ]; then
+            echo "JWT_SECRET is not provided in secrets. Generating a strong value..."
+            GEN_JWT=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
+            railway variables set JWT_SECRET="$GEN_JWT" --service "$RAILWAY_SERVICE_ID"
+          else
+            railway variables set JWT_SECRET="$INPUT_JWT_SECRET" --service "$RAILWAY_SERVICE_ID"
+          fi
+          
+          # Set other variables only if provided
           [ -n "$DATABASE_URL" ] && railway variables set DATABASE_URL="$DATABASE_URL" --service "$RAILWAY_SERVICE_ID" || true
-          [ -n "$JWT_SECRET" ] && railway variables set JWT_SECRET="$JWT_SECRET" --service "$RAILWAY_SERVICE_ID" || true
           [ -n "$NODE_ENV" ] && railway variables set NODE_ENV="$NODE_ENV" --service "$RAILWAY_SERVICE_ID" || true
           [ -n "$CORS_ORIGIN" ] && railway variables set CORS_ORIGIN="$CORS_ORIGIN" --service "$RAILWAY_SERVICE_ID" || true
           [ -n "$PORT" ] && railway variables set PORT="$PORT" --service "$RAILWAY_SERVICE_ID" || true
